@@ -22,7 +22,7 @@ Write, paste, or upload text files — and access them from anywhere 🌍
 👉 Open the app:
 
 ```
-https://your-username.github.io/notepad/
+https://chandan95raj.github.io/notepad/
 ```
 
 ---

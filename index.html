@@ -2,14 +2,12 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cloud Notepad</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notepad</title>
 
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
     <style>
         * {
@@ -19,15 +17,16 @@
         }
 
         body {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI';
             height: 100vh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #4f46e5, #9333ea);
             color: white;
-            overflow: hidden;
         }
 
         .container {
-            height: 100%;
+            flex: 1;
             display: flex;
             flex-direction: column;
             padding: 20px;
@@ -38,11 +37,7 @@
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        h1 {
-            font-size: 1.5rem;
+            margin-bottom: 10px;
         }
 
         .buttons {
@@ -57,7 +52,8 @@
             padding: 8px 14px;
             border-radius: 10px;
             cursor: pointer;
-            transition: 0.3s;
+            transition: .3s;
+            font-weight: 500;
         }
 
         button:hover,
@@ -85,31 +81,84 @@
             padding: 15px;
             font-size: 16px;
             resize: none;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, .15);
             color: white;
+            outline: none;
         }
 
         input[type="file"] {
             display: none;
         }
 
-        .files {
-            margin-top: 10px;
-            background: rgba(255, 255, 255, 0.1);
+        footer {
+            text-align: center;
             padding: 10px;
-            border-radius: 10px;
-            max-height: 150px;
-            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            font-size: 14px;
         }
 
-        .file-item {
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
             display: flex;
-            justify-content: space-between;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
         }
 
-        a {
+        .modal.active {
+            visibility: visible;
+        }
+
+        .modal-box {
+            background: white;
+            color: #111;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            width: 300px;
+            animation: pop .3s ease;
+        }
+
+        @keyframes pop {
+            from {
+                transform: scale(.7);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-buttons {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .modal-buttons button {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .ok {
+            background: #22c55e;
             color: white;
-            text-decoration: none;
+        }
+
+        .cancel {
+            background: #ef4444;
+            color: white;
         }
     </style>
 </head>
@@ -117,96 +166,117 @@
 <body>
 
     <div class="container">
+
         <div class="header">
-            <h1>📝 Firebase Notepad</h1>
+            <h2>📝Notepad</h2>
 
             <div class="buttons">
                 <button class="save" onclick="saveText()">Save</button>
-                <button class="reset" onclick="resetText()">Reset</button>
+                <button class="reset" onclick="confirmReset()">Reset</button>
 
                 <label class="upload">
-                    Upload
-                    <input type="file" onchange="uploadFile(event)">
+                    Upload File
+                    <input type="file" accept=".txt,.html,.js,.css,.json,.php" onchange="readFile(event)">
                 </label>
             </div>
         </div>
 
         <textarea id="note" placeholder="Start typing..."></textarea>
 
-        <div class="files" id="fileList"><b>📂 Files</b></div>
+    </div>
+
+    <footer>
+        ❤️ Designed & Developed by <b>Chandan Raj</b>
+    </footer>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-box">
+            <p id="modalText"></p>
+            <div class="modal-buttons" id="modalBtns"></div>
+        </div>
     </div>
 
     <script>
-        // 🔥 PASTE YOUR FIREBASE CONFIG HERE
+        // 🔥 YOUR CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyBRIYlVPWK1lAtzks7KHjSUO2ZrbXtV_xU",
             authDomain: "notepad-2fc8f.firebaseapp.com",
-            databaseURL: "https://notepad-2fc8f-default-rtdb.firebaseio.com",
             projectId: "notepad-2fc8f",
-            storageBucket: "notepad-2fc8f.firebasestorage.app",
-            messagingSenderId: "1090003270444",
-            appId: "1:1090003270444:web:0184878b11a1549b428a89"
         };
-
-
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const storage = firebase.storage();
 
         const note = document.getElementById('note');
-        const fileList = document.getElementById('fileList');
 
         // 🔄 Live sync
         db.collection('notepad').doc('shared').onSnapshot(doc => {
             if (doc.exists) note.value = doc.data().text || '';
         });
 
+        // 💾 Save
         function saveText() {
             db.collection('notepad').doc('shared').set({ text: note.value });
+            showAlert("Saved successfully ✅");
         }
 
-        function resetText() {
-            if (confirm('Reset for everyone?')) {
-                db.collection('notepad').doc('shared').set({ text: '' });
-            }
-        }
-
-        async function uploadFile(e) {
+        // 📂 Read uploaded file
+        function readFile(e) {
             const file = e.target.files[0];
             if (!file) return;
 
-            const ref = storage.ref('files/' + Date.now() + '_' + file.name);
+            const reader = new FileReader();
 
-            await ref.put(file);
-            const url = await ref.getDownloadURL();
+            reader.onload = function (event) {
+                note.value = event.target.result;
+                showAlert("File loaded into editor 📄");
+            };
 
-            await db.collection('files').add({ name: file.name, url });
+            reader.readAsText(file);
         }
 
-        db.collection('files').onSnapshot(snapshot => {
-            fileList.innerHTML = '<b>📂 Files</b>';
-
-            snapshot.forEach(doc => {
-                const file = doc.data();
-                const div = document.createElement('div');
-                div.className = 'file-item';
-
-                const link = document.createElement('a');
-                link.href = file.url;
-                link.innerText = file.name;
-                link.target = '_blank';
-
-                const dl = document.createElement('a');
-                dl.href = file.url;
-                dl.innerText = '⬇';
-                dl.setAttribute('download', file.name);
-
-                div.appendChild(link);
-                div.appendChild(dl);
-                fileList.appendChild(div);
+        // 🔁 Reset with custom confirm
+        function confirmReset() {
+            showConfirm("Reset for everyone?", () => {
+                db.collection('notepad').doc('shared').set({ text: '' });
             });
-        });
+        }
+
+        // 🎨 Custom Alert
+        function showAlert(msg) {
+            const modal = document.getElementById('modal');
+            const text = document.getElementById('modalText');
+            const btns = document.getElementById('modalBtns');
+
+            text.innerText = msg;
+            btns.innerHTML = `<button class="ok" onclick="closeModal()">OK</button>`;
+            modal.classList.add('active');
+        }
+
+        // 🎨 Custom Confirm
+        function showConfirm(msg, yesCallback) {
+            const modal = document.getElementById('modal');
+            const text = document.getElementById('modalText');
+            const btns = document.getElementById('modalBtns');
+
+            text.innerText = msg;
+            btns.innerHTML = `
+        <button class="ok">Yes</button>
+        <button class="cancel" onclick="closeModal()">No</button>
+    `;
+
+            btns.querySelector('.ok').onclick = () => {
+                yesCallback();
+                closeModal();
+            };
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
     </script>
 
 </body>

@@ -4,46 +4,44 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Modern Notepad</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Cloud Notepad</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-family: 'Segoe UI', sans-serif;
             height: 100vh;
-            width: 100vw;
+            background: linear-gradient(135deg, #4f46e5, #9333ea);
+            color: white;
             overflow: hidden;
         }
 
         .container {
-            width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(20px);
-            padding: 20px;
-            color: white;
             display: flex;
             flex-direction: column;
+            padding: 20px;
+            backdrop-filter: blur(20px);
         }
 
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
             flex-wrap: wrap;
             gap: 10px;
+            margin-bottom: 15px;
         }
 
         h1 {
-            font-size: 1.4rem;
-            font-weight: 600;
+            font-size: 1.5rem;
         }
 
         .buttons {
@@ -53,200 +51,182 @@
         }
 
         button,
-        label.upload {
+        label {
             border: none;
             padding: 8px 14px;
             border-radius: 10px;
             cursor: pointer;
             font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-block;
+            transition: 0.3s;
         }
 
-        .save-btn {
-            background: #4ade80;
+        button:hover,
+        label:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .save {
+            background: #22c55e;
             color: black;
         }
 
-        .reset-btn {
-            background: #f87171;
+        .reset {
+            background: #ef4444;
             color: white;
         }
 
         .upload {
-            background: #60a5fa;
-            color: white;
-        }
-
-        button:hover,
-        label.upload:hover {
-            transform: scale(1.05);
-            opacity: 0.9;
+            background: #3b82f6;
         }
 
         textarea {
             flex: 1;
             width: 100%;
+            border-radius: 15px;
             border: none;
-            outline: none;
-            resize: none;
-            border-radius: 12px;
             padding: 15px;
-            font-size: 1rem;
+            font-size: 16px;
+            resize: none;
             background: rgba(255, 255, 255, 0.15);
             color: white;
+            outline: none;
         }
 
         textarea::placeholder {
             color: rgba(255, 255, 255, 0.7);
         }
 
-        .footer {
-            margin-top: 5px;
-            font-size: 0.75rem;
-            opacity: 0.7;
-            text-align: right;
-        }
-
         input[type="file"] {
             display: none;
         }
 
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
+        .files {
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .file-item {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            visibility: hidden;
-            opacity: 0;
-            transition: 0.3s;
+            justify-content: space-between;
+            margin-bottom: 5px;
         }
 
-        .modal.active {
-            visibility: visible;
-            opacity: 1;
+        a {
+            color: #fff;
+            text-decoration: none;
         }
 
-        .modal-content {
-            background: white;
-            color: black;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            width: 300px;
-            animation: pop 0.3s ease;
-        }
-
-        @keyframes pop {
-            from {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .modal-buttons {
-            margin-top: 15px;
-            display: flex;
-            justify-content: space-around;
-        }
-
-        .confirm {
-            background: #ef4444;
-            color: white;
-        }
-
-        .cancel {
-            background: #e5e7eb;
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 
 <body>
+
     <div class="container">
         <div class="header">
-            <h1>📝 My Notepad</h1>
+            <h1>📝 Cloud Notepad</h1>
+
             <div class="buttons">
-                <button class="save-btn" onclick="saveNote()">Save</button>
+                <button class="save" onclick="saveText()">Save</button>
+                <button class="reset" onclick="resetText()">Reset</button>
+
                 <label class="upload">
-                    Upload File
-                    <input type="file" accept=".txt" onchange="uploadFile(event)">
+                    Upload
+                    <input type="file" onchange="uploadFile(event)">
                 </label>
-                <button class="reset-btn" onclick="openModal()">Reset</button>
             </div>
         </div>
 
-        <textarea id="note" placeholder="Start typing your notes here..."></textarea>
+        <textarea id="note" placeholder="Start typing... shared live for everyone"></textarea>
 
-        <div class="footer">Auto-saves in your browser</div>
-    </div>
-
-    <!-- Modal -->
-    <div class="modal" id="modal">
-        <div class="modal-content">
-            <p>Are you sure you want to reset?</p>
-            <div class="modal-buttons">
-                <button class="confirm" onclick="resetNote()">Yes</button>
-                <button class="cancel" onclick="closeModal()">Cancel</button>
-            </div>
+        <div class="files" id="fileList">
+            <b>📂 Files</b>
         </div>
     </div>
 
     <script>
+        const SUPABASE_URL = "https://mnggofnrxkqlsoxohpe.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_Xu9Iy9s1bJWUmS8hdzPlRw_MLQxMucv";
+
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         const note = document.getElementById('note');
-        const modal = document.getElementById('modal');
+        const fileList = document.getElementById('fileList');
 
-        // Load saved note
-        window.onload = () => {
-            note.value = localStorage.getItem('note') || '';
-        };
-
-        function saveNote() {
-            localStorage.setItem('note', note.value);
-            alert('Saved successfully!');
+        async function loadText() {
+            const { data } = await client.from('notes').select('*').eq('id', 1).single();
+            if (data) note.value = data.content;
         }
 
-        // Auto-save
-        note.addEventListener('input', () => {
-            localStorage.setItem('note', note.value);
-        });
+        loadText();
 
-        function openModal() {
-            modal.classList.add('active');
+        async function saveText() {
+            await client.from('notes').upsert({ id: 1, content: note.value });
         }
 
-        function closeModal() {
-            modal.classList.remove('active');
+        async function resetText() {
+            if (confirm('Reset for everyone?')) {
+                note.value = '';
+                await client.from('notes').upsert({ id: 1, content: '' });
+            }
         }
 
-        function resetNote() {
-            note.value = '';
-            localStorage.removeItem('note');
-            closeModal();
-        }
+        client.channel('live')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, payload => {
+                note.value = payload.new.content;
+            })
+            .subscribe();
 
-        // File Upload
-        function uploadFile(event) {
-            const file = event.target.files[0];
+        async function uploadFile(e) {
+            const file = e.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                note.value = e.target.result;
-                localStorage.setItem('note', note.value);
-            };
-            reader.readAsText(file);
+            const fileName = Date.now() + '_' + file.name;
+
+            await client.storage.from('files').upload(fileName, file);
+
+            const { data } = client.storage.from('files').getPublicUrl(fileName);
+
+            await client.from('files').insert({ name: file.name, url: data.publicUrl });
+
+            loadFiles();
         }
+
+        async function loadFiles() {
+            const { data } = await client.from('files').select('*');
+
+            fileList.innerHTML = '<b>📂 Files</b>';
+
+            data.forEach(file => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+
+                const link = document.createElement('a');
+                link.href = file.url;
+                link.innerText = file.name;
+                link.target = '_blank';
+
+                const download = document.createElement('a');
+                download.href = file.url;
+                download.innerText = '⬇';
+                download.setAttribute('download', file.name);
+
+                div.appendChild(link);
+                div.appendChild(download);
+                fileList.appendChild(div);
+            });
+        }
+
+        loadFiles();
     </script>
+
 </body>
 
 </html>

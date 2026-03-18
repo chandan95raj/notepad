@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📝Notepad</title>
-
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
@@ -160,6 +159,11 @@
             background: #ef4444;
             color: white;
         }
+
+        #status {
+            min-width: 80px;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -171,13 +175,16 @@
             <h2>📝Notepad</h2>
 
             <div class="buttons">
-                <!-- <button class="save" onclick="saveText()">Save</button> -->
                 <button class="reset" onclick="confirmReset()">Reset</button>
+
+                <button class="save" onclick="copyText()">📋 Copy</button>
 
                 <label class="upload">
                     Upload File
                     <input type="file" accept=".txt,.html,.js,.css,.json,.php" onchange="readFile(event)">
                 </label>
+
+                <span id="status" style="align-self:center;font-size:13px;opacity:.8;"></span>
             </div>
         </div>
 
@@ -212,6 +219,7 @@
         const db = firebase.firestore();
 
         const note = document.getElementById('note');
+        const statusEl = document.getElementById('status');
 
         let timeout = null;
         let isUpdatingFromFirebase = false;
@@ -222,6 +230,7 @@
                 isUpdatingFromFirebase = true;
                 note.value = doc.data().text || '';
                 isUpdatingFromFirebase = false;
+                setStatus("Saved ✅");
             }
         });
 
@@ -229,12 +238,16 @@
         function autoSave() {
             if (isUpdatingFromFirebase) return;
 
+            setStatus("Saving... ⏳");
+
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 db.collection('notepad').doc('shared').set({
                     text: note.value
+                }).then(() => {
+                    setStatus("Saved ✅");
                 });
-            }, 600); // delay to reduce writes
+            }, 600);
         }
 
         // 👇 Trigger auto-save while typing
@@ -250,13 +263,29 @@
             reader.onload = function (event) {
                 note.value = event.target.result;
 
-                // Auto save after file load
+                setStatus("Saving... ⏳");
+
                 db.collection('notepad').doc('shared').set({
                     text: note.value
+                }).then(() => {
+                    setStatus("Saved ✅");
                 });
             };
 
             reader.readAsText(file);
+        }
+
+        // 📋 Copy text
+        function copyText() {
+            if (!note.value.trim()) return;
+
+            navigator.clipboard.writeText(note.value).then(() => {
+                setStatus("Copied ✅");
+
+                setTimeout(() => {
+                    setStatus("");
+                }, 2000);
+            });
         }
 
         // 🔁 Reset with confirm
@@ -288,6 +317,11 @@
 
         function closeModal() {
             document.getElementById('modal').classList.remove('active');
+        }
+
+        // 🔄 Status helper
+        function setStatus(msg) {
+            statusEl.innerText = msg;
         }
     </script>
 

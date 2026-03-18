@@ -158,17 +158,17 @@
         const fileList = document.getElementById('fileList');
 
         // 🔄 Live sync
-        db.collection('notes').doc('shared').onSnapshot(doc => {
+        db.collection('notepad').doc('shared').onSnapshot(doc => {
             if (doc.exists) note.value = doc.data().text || '';
         });
 
         function saveText() {
-            db.collection('notes').doc('shared').set({ text: note.value });
+            db.collection('notepad').doc('shared').set({ text: note.value });
         }
 
         function resetText() {
             if (confirm('Reset for everyone?')) {
-                db.collection('notes').doc('shared').set({ text: '' });
+                db.collection('notepad').doc('shared').set({ text: '' });
             }
         }
 

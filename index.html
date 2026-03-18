@@ -198,7 +198,6 @@
     </div>
 
     <script>
-        // 🔥 YOUR CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyBRIYlVPWK1lAtzks7KHjSUO2ZrbXtV_xU",
             authDomain: "notepad-2fc8f.firebaseapp.com",
@@ -214,18 +213,34 @@
 
         const note = document.getElementById('note');
 
+        let timeout = null;
+        let isUpdatingFromFirebase = false;
+
         // 🔄 Live sync
         db.collection('notepad').doc('shared').onSnapshot(doc => {
-            if (doc.exists) note.value = doc.data().text || '';
+            if (doc.exists) {
+                isUpdatingFromFirebase = true;
+                note.value = doc.data().text || '';
+                isUpdatingFromFirebase = false;
+            }
         });
 
-        // 💾 Save
-        function saveText() {
-            db.collection('notepad').doc('shared').set({ text: note.value });
-            showAlert("Saved successfully ✅");
+        // ⚡ Auto Save (debounce)
+        function autoSave() {
+            if (isUpdatingFromFirebase) return;
+
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                db.collection('notepad').doc('shared').set({
+                    text: note.value
+                });
+            }, 600); // delay to reduce writes
         }
 
-        // 📂 Read uploaded file
+        // 👇 Trigger auto-save while typing
+        note.addEventListener('input', autoSave);
+
+        // 📂 File upload → load + auto save
         function readFile(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -234,31 +249,24 @@
 
             reader.onload = function (event) {
                 note.value = event.target.result;
-                showAlert("File loaded into editor 📄");
+
+                // Auto save after file load
+                db.collection('notepad').doc('shared').set({
+                    text: note.value
+                });
             };
 
             reader.readAsText(file);
         }
 
-        // 🔁 Reset with custom confirm
+        // 🔁 Reset with confirm
         function confirmReset() {
             showConfirm("Reset for everyone?", () => {
                 db.collection('notepad').doc('shared').set({ text: '' });
             });
         }
 
-        // 🎨 Custom Alert
-        function showAlert(msg) {
-            const modal = document.getElementById('modal');
-            const text = document.getElementById('modalText');
-            const btns = document.getElementById('modalBtns');
-
-            text.innerText = msg;
-            btns.innerHTML = `<button class="ok" onclick="closeModal()">OK</button>`;
-            modal.classList.add('active');
-        }
-
-        // 🎨 Custom Confirm
+        // 🎨 Confirm Modal
         function showConfirm(msg, yesCallback) {
             const modal = document.getElementById('modal');
             const text = document.getElementById('modalText');

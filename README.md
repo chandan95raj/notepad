@@ -9,7 +9,7 @@ Write, paste, or upload text files — and access them from anywhere 🌍
 
 ✨ Real-time sync (like Google Docs)
 💾 Auto-save while typing
-📂 Upload `.txt`, `.html`, `.js`, `.php` files
+📂 Upload `.txt`, `.html`, `.css , `.js`, `.php`, `.json`, `.jsx`, `.ts`, `.tsx` files
 📋 One-click copy to clipboard
 🔄 Reset for all users
 ⚡ Fast & lightweight (pure HTML + JS)

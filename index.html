@@ -36,6 +36,7 @@
         .header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             flex-wrap: wrap;
             gap: 5px;
             margin-bottom: 10px;
@@ -168,6 +169,20 @@
             min-width: 70px;
             text-align: center;
         }
+
+        body.light {
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            color: #111;
+        }
+
+        body.light textarea {
+            background: rgba(0, 0, 0, 0.05);
+            color: #111;
+        }
+
+        body.light footer {
+            background: rgba(0, 0, 0, 0.05);
+        }
     </style>
 </head>
 
@@ -177,7 +192,9 @@
 
         <div class="header">
             <h2>📝Notepad</h2>
+            <div id="lastEdited" style="font-size:12px;opacity:.7;margin: 0;padding: 0;"></div>
             <div class="buttons">
+                <button onclick="toggleTheme()">🌞</button>
                 <span id="status" style="align-self:center;font-size:13px;opacity:.8;"></span>
                 <button class="reset" onclick="confirmReset()">♻️ Reset</button>
 
@@ -208,6 +225,7 @@
     </div>
 
     <script>
+        const lastEditedEl = document.getElementById('lastEdited');
         const firebaseConfig = {
             apiKey: "AIzaSyBRIYlVPWK1lAtzks7KHjSUO2ZrbXtV_xU",
             authDomain: "notepad-2fc8f.firebaseapp.com",
@@ -234,6 +252,16 @@
                 note.value = doc.data().text || '';
                 isUpdatingFromFirebase = false;
                 setStatus("Saved ✅");
+
+                // 🕒 show last edited
+                if (doc.data().updatedAt) {
+                    const date = doc.data().updatedAt.toDate
+                        ? doc.data().updatedAt.toDate()
+                        : new Date(doc.data().updatedAt);
+
+                    const formattedDate = date.toLocaleString('en-GB');
+                    lastEditedEl.innerText = "Last edited: " + formattedDate;
+                }
             }
         });
 
@@ -246,7 +274,8 @@
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 db.collection('notepad').doc('shared').set({
-                    text: note.value
+                    text: note.value,
+                    updatedAt: new Date()
                 }).then(() => {
                     setStatus("Saved ✅");
                 });
@@ -325,6 +354,34 @@
         // 🔄 Status helper
         function setStatus(msg) {
             statusEl.innerText = msg;
+        }
+
+        // 🌙 Theme toggle
+        function toggleTheme() {
+            const isLight = document.body.classList.toggle('light');
+
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+
+            updateThemeIcon();
+        }
+
+        // load saved theme
+        (function () {
+            const saved = localStorage.getItem('theme');
+
+            if (saved === 'light') {
+                document.body.classList.add('light');
+            }
+
+            updateThemeIcon();
+        })();
+
+        // update icon
+        function updateThemeIcon() {
+            const btn = document.querySelector('button[onclick=\"toggleTheme()\"]');
+            if (!btn) return;
+
+            btn.innerText = document.body.classList.contains('light') ? '🌙' : '🌞';
         }
     </script>
 
